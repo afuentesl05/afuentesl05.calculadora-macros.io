@@ -15,10 +15,7 @@ Calculadora web en una sola página (HTML + CSS + JS) que estima calorías de ma
 - Generación de **enlace compartible** con parámetros precargados.
 
 ## 🚀 Demo
-## 🚀 Demo
-
 [![GitHub Pages](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-4f8cff?logo=github&logoColor=white)](https://afuentesl05.github.io/afuentesl05.calculadora-macros.io/)
-
 
 ## 🛠️ Uso local
 1. Clona este repositorio:

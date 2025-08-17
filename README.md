@@ -28,7 +28,7 @@ Calculadora web en una sola página (HTML + CSS + JS) que estima calorías de ma
 ## 📂 Estructura
 ├── index.html   # Calculadora completa (HTML + CSS + JS)
 
-##📖 Tecnologías
+## 📖 Tecnologías
 HTML5
 CSS3 (custom properties, grid, flexbox
 JavaScript (vanilla, sin dependencias)

@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculadora de Calorías y Macros</title>
+  <meta name="description" content="Calculadora de TDEE, déficits y volumen con macronutrientes exactos mediante Mifflin–St Jeor." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg: #0b0d12; /* gris muy oscuro */
+      --card: #121722; /* azul pizarra oscuro */
+      --muted: #a6b1c2;
+      --text: #e7ecf5;
+      --accent: #4f8cff;
+      --accent-2: #22c55e; /* verde */
+      --warn: #f59e0b; /* ámbar */
+      --danger: #ef4444; /* rojo */
+      --ring: rgba(79,140,255,.4);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+    }
+    *{ box-sizing: border-box; }
+    html, body{ height: 100%; }
+    body{
+      margin:0; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 80% -10%, rgba(79,140,255,.10), transparent),
+                  radial-gradient(900px 500px at -10% 10%, rgba(34,197,94,.10), transparent), var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .container{ max-width: 1150px; margin: 40px auto; padding: 0 20px; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom: 18px; }
+    h1{ font-size: clamp(1.6rem, 1.1rem + 2vw, 2.4rem); margin: 0; letter-spacing: -0.02em; }
+    .subtitle{ color: var(--muted); font-size: .98rem; }
+
+    .grid{ display:grid; gap:18px; }
+    .grid-2{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .grid-3{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .grid-4{ grid-template-columns: repeat(4, minmax(0,1fr)); }
+    @media (max-width: 980px){ .grid-4{ grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (max-width: 720px){ .grid-4, .grid-3{ grid-template-columns: 1fr; } header{ flex-direction: column; align-items: flex-start; } }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.0));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(4px);
+    }
+
+    label{ display:block; font-weight:600; margin-bottom:8px; }
+    .input, select{
+      width:100%;
+      background: #0f1320;
+      color: var(--text);
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 12px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, transform .02s;
+    }
+    .input:focus, select:focus{ border-color: var(--accent); box-shadow: 0 0 0 6px var(--ring); }
+    .row{ display: grid; gap:14px; grid-template-columns: repeat(12, 1fr); }
+    .col-6{ grid-column: span 6; } .col-4{ grid-column: span 4; } .col-3{ grid-column: span 3; } .col-12{ grid-column: span 12; }
+    @media (max-width: 720px){ .col-6,.col-4,.col-3{ grid-column: span 12; } }
+
+    .actions{ display:flex; gap:10px; flex-wrap: wrap; }
+    button{
+      appearance: none; border:0; cursor: pointer; font-weight: 700; color: white; padding: 12px 16px;
+      border-radius: 12px; transition: transform .05s ease, filter .15s ease, box-shadow .2s; box-shadow: var(--shadow);
+    }
+    .btn-primary{ background: linear-gradient(180deg, #5ea0ff, #4f8cff); }
+    .btn-primary:hover{ filter: brightness(1.08); }
+    .btn-secondary{ background: #1a2233; border:1px solid rgba(255,255,255,.12); color: var(--text); }
+    .btn-tertiary{ background: #16272a; border:1px solid rgba(34,197,94,.35); color: #9ae6b4; }
+    .btn-warning{ background: #3a2a0d; border:1px solid rgba(245,158,11,.5); color: #f9d48a; }
+
+    details{ background: #0f1420; border: 1px dashed rgba(255,255,255,.18); padding: 12px 14px; border-radius: 12px; }
+    summary{ cursor: pointer; font-weight:700; }
+    .hint{ color: var(--muted); font-size: .92rem; }
+
+    .kcal{ font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; }
+    .tag{ display:inline-block; font-weight:700; padding: 4px 10px; border-radius: 999px; font-size: .78rem; }
+    .tag-blue{ background: rgba(79,140,255,.15); color:#b6d0ff; border:1px solid rgba(79,140,255,.35); }
+    .tag-green{ background: rgba(34,197,94,.15); color:#baf3cf; border:1px solid rgba(34,197,94,.35); }
+    .tag-amber{ background: rgba(245,158,11,.15); color:#fde68a; border:1px solid rgba(245,158,11,.35); }
+
+    table{ width: 100%; border-collapse: collapse; }
+    th, td{ text-align:left; padding: 8px 6px; }
+    th{ color: var(--muted); font-weight: 600; border-bottom: 1px dashed rgba(255,255,255,.12); }
+    tr + tr td{ border-top: 1px dashed rgba(255,255,255,.08); }
+
+    .note{ margin-top:10px; font-size:.92rem; color:#fbd38d; }
+    .footer{ margin-top: 18px; color: var(--muted); font-size: .9rem; }
+    .small{ font-size:.85rem; color: var(--muted); }
+    .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .sep{ height:1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent); margin: 14px 0; }
+
+    .pill-group{ display:flex; gap:8px; flex-wrap:wrap; }
+    .pill{ padding:8px 10px; border-radius: 12px; background:#0f1420; border:1px solid rgba(255,255,255,.12); cursor:pointer; }
+    .pill[aria-checked="true"]{ border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+    .visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Calculadora de Calorías y Macros</h1>
+        <p class="subtitle">Mifflin–St Jeor → TDEE → Déficits del 10/20% y Volumen recomendado. Macros automáticos.</p>
+      </div>
+      <div class="actions">
+        <button class="btn-secondary" id="copyLinkBtn" title="Copia un enlace con tus datos">🔗 Copiar enlace</button>
+        <button class="btn-secondary" id="copyAllBtn" title="Copia todos los resultados">📋 Copiar resultados</button>
+      </div>
+    </header>
+
+    <section class="card" aria-labelledby="datos-personales">
+      <h2 id="datos-personales" class="visually-hidden">Datos de entrada</h2>
+      <div class="row">
+        <div class="col-3">
+          <label for="sex">Sexo</label>
+          <div class="pill-group" role="radiogroup" aria-label="Sexo">
+            <button class="pill" role="radio" aria-checked="true" data-value="male" id="sex-male">Hombre</button>
+            <button class="pill" role="radio" aria-checked="false" data-value="female" id="sex-female">Mujer</button>
+            <input type="hidden" id="sex" value="male" />
+          </div>
+        </div>
+        <div class="col-3">
+          <label for="age">Edad (años)</label>
+          <input class="input" id="age" type="number" inputmode="numeric" min="10" max="90" placeholder="e.g. 24" required />
+          <p class="small">La ecuación Mifflin–St Jeor requiere edad.</p>
+        </div>
+        <div class="col-3">
+          <label for="weight">Peso (kg)</label>
+          <input class="input" id="weight" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 72.5" required />
+        </div>
+        <div class="col-3">
+          <label for="height">Altura (cm)</label>
+          <input class="input" id="height" type="number" inputmode="decimal" min="120" max="230" step="0.1" placeholder="e.g. 178" required />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px; align-items:end;">
+        <div class="col-6">
+          <label for="activity">Nivel de actividad</label>
+          <select id="activity" class="input">
+            <option value="1.2">Sedentario — poco o nada de ejercicio (1.2)</option>
+            <option value="1.375">Ligero — 1–3 días/semana (1.375)</option>
+            <option value="1.55" selected>Moderado — 3–5 días/semana (1.55)</option>
+            <option value="1.725">Activo — 6–7 días/semana (1.725)</option>
+            <option value="1.9">Muy activo — 2 sesiones/día o trabajo físico (1.9)</option>
+          </select>
+        </div>
+        <div class="col-6 actions">
+          <button class="btn-primary" id="calcBtn">⚡ Calcular</button>
+          <button class="btn-secondary" id="resetBtn" type="button">↺ Reiniciar</button>
+          <span class="hint">Los resultados aparecen abajo. Todo se calcula en tu navegador.</span>
+        </div>
+      </div>
+
+      <div class="sep" aria-hidden="true"></div>
+
+      <details>
+        <summary>⚙️ Ajustes avanzados (opcional)</summary>
+        <div class="grid grid-4" style="margin-top:12px;">
+          <div class="card">
+            <label for="ppk_maint">Proteína (g/kg) para mantenimiento y déficit</label>
+            <input id="ppk_maint" class="input" type="number" min="1.2" max="3.0" step="0.1" value="2.0">
+            <p class="small">Recomendado 1.8–2.2 g/kg.</p>
+          </div>
+          <div class="card">
+            <label for="ppk_bulk">Proteína (g/kg) para volumen</label>
+            <input id="ppk_bulk" class="input" type="number" min="1.4" max="3.0" step="0.1" value="1.8">
+            <p class="small">Un poco menos en superávit suele ser suficiente.</p>
+          </div>
+          <div class="card">
+            <label for="fpk_all">Grasas (g/kg) para todos los casos</label>
+            <input id="fpk_all" class="input" type="number" min="0.5" max="1.5" step="0.1" value="0.8">
+            <p class="small">Mínimo saludable ≈ 0.5 g/kg.</p>
+          </div>
+          <div class="card">
+            <label for="bulk_pct">Superávit para volumen (%)</label>
+            <input id="bulk_pct" class="input" type="number" min="5" max="25" step="1" value="10">
+            <p class="small">Volumen recomendado: 8–15%.</p>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="grid grid-4" id="results" style="margin-top:18px; display:none;">
+      <!-- Tarjetas de resultado se generan por JS -->
+    </section>
+
+    <p class="footer">Nota: Esta es una estimación. Ajusta con tu evolución real (peso, progreso en el gimnasio, energía). Fórmula: Mifflin–St Jeor × factor de actividad.</p>
+  </div>
+
+  <script>
+    // Utilidades numéricas
+    const clamp = (x, min, max) => Math.min(Math.max(x, min), max);
+    const round = (x, d=0) => {
+      const p = Math.pow(10, d);
+      return Math.round((x + Number.EPSILON) * p) / p;
+    };
+
+    function mifflinStJeor({sex, weight, height, age}){
+      // weight kg, height cm, age years
+      // Hombre: BMR = 10W + 6.25H - 5A + 5
+      // Mujer : BMR = 10W + 6.25H - 5A - 161
+      const base = 10*weight + 6.25*height - 5*age;
+      return sex === 'male' ? base + 5 : base - 161;
+    }
+
+    function formatMacros(cal, protG, fatG){
+      const protK = protG * 4;
+      let fatK = fatG * 9;
+      let carbsG = (cal - (protK + fatK)) / 4;
+      let note = '';
+
+      // Si los carbohidratos salen negativos, intenta bajar grasa hasta el mínimo 0.5 g/kg luego ajusta.
+      if (carbsG < 0){
+        note = 'Con estos parámetros no hay calorías suficientes para cubrir proteína y grasa preferidas. He ajustado las grasas al mínimo y puesto carbohidratos a 0.';
+        carbsG = 0;
+      }
+      const carbsK = Math.max(0, carbsG) * 4;
+      const total = protK + fatK + carbsK;
+      const protPct = total ? (protK / total * 100) : 0;
+      const fatPct  = total ? (fatK  / total * 100) : 0;
+      const carbPct = total ? (carbsK/ total * 100) : 0;
+
+      return {
+        protG: Math.max(0, protG), fatG: Math.max(0, fatG), carbsG: Math.max(0, carbsG),
+        protK: Math.max(0, protK), fatK: Math.max(0, fatK), carbsK: Math.max(0, carbsK),
+        protPct, fatPct, carbPct, note
+      };
+    }
+
+    function computeAll(){
+      const sex = document.getElementById('sex').value;
+      const age = parseInt(document.getElementById('age').value, 10);
+      const weight = parseFloat(document.getElementById('weight').value);
+      const height = parseFloat(document.getElementById('height').value);
+      const activity = parseFloat(document.getElementById('activity').value);
+
+      const ppkMaint = parseFloat(document.getElementById('ppk_maint').value);
+      const ppkBulk  = parseFloat(document.getElementById('ppk_bulk').value);
+      const fpkAll   = parseFloat(document.getElementById('fpk_all').value);
+      const bulkPct  = parseFloat(document.getElementById('bulk_pct').value);
+
+      if(!sex || !age || !weight || !height || !activity){
+        alert('Rellena sexo, edad, peso, altura y actividad.');
+        return null;
+      }
+
+      const bmr = mifflinStJeor({sex, weight, height, age});
+      const tdee = bmr * activity;
+
+      const scenarios = [
+        { key: 'maint', label: 'Mantenimiento', tagClass: 'tag-blue', kcal: tdee, ppk: ppkMaint, fpk: fpkAll },
+        { key: 'def10', label: 'Déficit 10%', tagClass: 'tag-amber', kcal: tdee * 0.90, ppk: ppkMaint, fpk: fpkAll },
+        { key: 'def20', label: 'Déficit 20%', tagClass: 'tag-amber', kcal: tdee * 0.80, ppk: ppkMaint, fpk: fpkAll },
+        { key: 'bulk',  label: 'Volumen (+'+round(bulkPct,0)+'%)', tagClass: 'tag-green', kcal: tdee * (1 + bulkPct/100), ppk: ppkBulk, fpk: fpkAll },
+      ];
+
+      // Construye resultados con macros (prot/fat fijos por kg, carbs resto)
+      const results = scenarios.map(s => {
+        const kcal = Math.round(s.kcal);
+        const protG = s.ppk * weight;
+        let fatG = s.fpk * weight;
+
+        // Intenta asegurar que carbs >= 0 reduciendo grasa hasta mínimo 0.5 g/kg si hace falta
+        const minFatG = 0.5 * weight;
+        const protK = protG * 4;
+        let fatK = fatG * 9;
+        let carbsG = (kcal - (protK + fatK)) / 4;
+        let note = '';
+        if (carbsG < 0){
+          // reduce fat to minimum
+          fatG = Math.max(minFatG, Math.min(fatG, Math.max(0, (kcal - protK) / 9)));
+          fatK = fatG * 9;
+          carbsG = (kcal - (protK + fatK)) / 4;
+          if (carbsG < 0){
+            carbsG = 0;
+            note = 'No caben carbohidratos con la proteína y grasa mínimas. Considera bajar proteína o reducir el déficit.';
+          }
+        }
+
+        const fm = formatMacros(kcal, protG, fatG);
+        if (note) fm.note = note;
+        return { ...s, kcal, macros: fm };
+      });
+
+      return { bmr, tdee: Math.round(tdee), results };
+    }
+
+    function toClipboard(text){
+      return navigator.clipboard.writeText(text);
+    }
+
+    function renderResults(calc){
+      const wrap = document.getElementById('results');
+      if(!calc){ wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+      wrap.style.display = 'grid';
+      wrap.innerHTML = '';
+
+      calc.results.forEach(r => {
+        const m = r.macros;
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+              <div class="tag ${r.tagClass}">${r.label}</div>
+              <div class="kcal" style="margin-top:8px;">${r.kcal} kcal/día</div>
+              <div class="small">(aprox.)</div>
+            </div>
+            <button class="btn-tertiary" data-copy-scenario="${r.key}">📋 Copiar</button>
+          </div>
+          <div class="sep"></div>
+          <table aria-label="Tabla de macronutrientes para ${r.label}">
+            <thead>
+              <tr><th>Macro</th><th>g</th><th>kcal</th><th>%</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Proteína</td><td class="mono">${round(m.protG,0)}</td><td class="mono">${round(m.protK,0)}</td><td class="mono">${round(m.protPct,1)}%</td></tr>
+              <tr><td>Grasas</td><td class="mono">${round(m.fatG,0)}</td><td class="mono">${round(m.fatK,0)}</td><td class="mono">${round(m.fatPct,1)}%</td></tr>
+              <tr><td>Carbohidratos</td><td class="mono">${round(m.carbsG,0)}</td><td class="mono">${round(m.carbsK,0)}</td><td class="mono">${round(m.carbPct,1)}%</td></tr>
+            </tbody>
+          </table>
+          ${m.note ? `<p class="note">⚠️ ${m.note}</p>` : ''}
+        `;
+        wrap.appendChild(card);
+      });
+
+      // Botones copiar por tarjeta
+      wrap.querySelectorAll('[data-copy-scenario]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-copy-scenario');
+          const r = calc.results.find(x => x.key === key);
+          if(!r) return;
+          const m = r.macros;
+          const text = `${r.label}: ${r.kcal} kcal\n`+
+            `Proteína: ${round(m.protG,0)} g (${round(m.protK,0)} kcal)\n`+
+            `Grasas: ${round(m.fatG,0)} g (${round(m.fatK,0)} kcal)\n`+
+            `Carbohidratos: ${round(m.carbsG,0)} g (${round(m.carbsK,0)} kcal)`;
+          toClipboard(text).then(() => btn.textContent = '✅ Copiado').catch(()=>btn.textContent='⚠️ Error');
+          setTimeout(()=> btn.textContent = '📋 Copiar', 1600);
+        });
+      });
+    }
+
+    // Manejo de sexo como pills accesibles
+    function initSexPills(){
+      const pills = [document.getElementById('sex-male'), document.getElementById('sex-female')];
+      const hidden = document.getElementById('sex');
+      function set(val){
+        hidden.value = val;
+        pills.forEach(p => p.setAttribute('aria-checked', p.dataset.value === val ? 'true' : 'false'));
+      }
+      pills.forEach(p => p.addEventListener('click', () => set(p.dataset.value)));
+      return { set };
+    }
+
+    function updateURLParams(){
+      const params = new URLSearchParams();
+      params.set('sex', document.getElementById('sex').value);
+      params.set('age', document.getElementById('age').value || '');
+      params.set('w', document.getElementById('weight').value || '');
+      params.set('h', document.getElementById('height').value || '');
+      params.set('act', document.getElementById('activity').value);
+      params.set('ppkm', document.getElementById('ppk_maint').value);
+      params.set('ppkb', document.getElementById('ppk_bulk').value);
+      params.set('fpk', document.getElementById('fpk_all').value);
+      params.set('bulk', document.getElementById('bulk_pct').value);
+      const url = `${location.pathname}?${params.toString()}`;
+      history.replaceState(null, '', url);
+    }
+
+    function loadFromURL(){
+      const p = new URLSearchParams(location.search);
+      const sex = p.get('sex');
+      const age = p.get('age');
+      const w = p.get('w');
+      const h = p.get('h');
+      const act = p.get('act');
+      const ppkm = p.get('ppkm');
+      const ppkb = p.get('ppkb');
+      const fpk = p.get('fpk');
+      const bulk = p.get('bulk');
+      const pills = initSexPills();
+      if(sex === 'male' || sex === 'female') pills.set(sex);
+      if(age) document.getElementById('age').value = age;
+      if(w) document.getElementById('weight').value = w;
+      if(h) document.getElementById('height').value = h;
+      if(act) document.getElementById('activity').value = act;
+      if(ppkm) document.getElementById('ppk_maint').value = ppkm;
+      if(ppkb) document.getElementById('ppk_bulk').value = ppkb;
+      if(fpk) document.getElementById('fpk_all').value = fpk;
+      if(bulk) document.getElementById('bulk_pct').value = bulk;
+    }
+
+    // Eventos
+    window.addEventListener('DOMContentLoaded', () => {
+      const { set } = initSexPills();
+      loadFromURL();
+
+      document.getElementById('calcBtn').addEventListener('click', () => {
+        const calc = computeAll();
+        if(!calc) return;
+        renderResults(calc);
+        updateURLParams();
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('age').value = '';
+        document.getElementById('weight').value = '';
+        document.getElementById('height').value = '';
+        document.getElementById('activity').value = '1.55';
+        document.getElementById('ppk_maint').value = '2.0';
+        document.getElementById('ppk_bulk').value = '1.8';
+        document.getElementById('fpk_all').value = '0.8';
+        document.getElementById('bulk_pct').value = '10';
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('results').innerHTML = '';
+        history.replaceState(null, '', location.pathname);
+        set('male');
+      });
+
+      document.getElementById('copyAllBtn').addEventListener('click', () => {
+        const calc = computeAll();
+        if(!calc) return;
+        const lines = [];
+        lines.push(`BMR: ${Math.round(calc.bmr)} kcal | TDEE: ${calc.tdee} kcal`);
+        calc.results.forEach(r => {
+          const m = r.macros;
+          lines.push(`\n${r.label}: ${r.kcal} kcal`);
+          lines.push(`  - Proteína: ${Math.round(m.protG)} g (${Math.round(m.protK)} kcal)`);
+          lines.push(`  - Grasas:   ${Math.round(m.fatG)} g (${Math.round(m.fatK)} kcal)`);
+          lines.push(`  - Carbos:   ${Math.round(m.carbsG)} g (${Math.round(m.carbsK)} kcal)`);
+        });
+        toClipboard(lines.join('\n')).then(() => {
+          const b = document.getElementById('copyAllBtn');
+          b.textContent = '✅ Copiado'; setTimeout(()=> b.textContent='📋 Copiar resultados', 1600);
+        });
+      });
+
+      document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        // Si aún no hay parámetros, actualiza primero con los actuales
+        updateURLParams();
+        toClipboard(location.href).then(() => {
+          const b = document.getElementById('copyLinkBtn');
+          b.textContent = '✅ Enlace copiado'; setTimeout(()=> b.textContent='🔗 Copiar enlace', 1600);
+        });
+      });
+    });
+  </script>
+</body>
+</html>
